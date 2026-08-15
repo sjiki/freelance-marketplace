@@ -9,7 +9,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ユーザー（クライアント/フリーランサー共通）
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -27,7 +26,6 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  // リレーション
   projects      Project[]
   proposals     Proposal[]
   sentMessages  Message[] @relation("SentMessages")
@@ -45,7 +43,6 @@ enum UserRole {
   ADMIN
 }
 
-// 案件
 model Project {
   id          String   @id @default(cuid())
   title       String
@@ -62,11 +59,9 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // クライアント
   clientId    String
   client      User     @relation(fields: [clientId], references: [id])
 
-  // リレーション
   proposals   Proposal[]
   contracts   Contract[]
   reviews     Review[]
@@ -88,7 +83,6 @@ enum ProjectStatus {
   CANCELLED
 }
 
-// 提案（入札）
 model Proposal {
   id          String   @id @default(cuid())
   bidAmount   Float
@@ -98,7 +92,6 @@ model Proposal {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // リレーション
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id])
   freelancerId String
@@ -117,7 +110,6 @@ enum ProposalStatus {
   WITHDRAWN
 }
 
-// 契約
 model Contract {
   id          String   @id @default(cuid())
   startDate   DateTime @default(now())
@@ -128,7 +120,6 @@ model Contract {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // リレーション
   projectId   String   @unique
   project     Project  @relation(fields: [projectId], references: [id])
   proposalId  String   @unique
@@ -143,14 +134,12 @@ enum ContractStatus {
   DISPUTED
 }
 
-// レビュー
 model Review {
   id        String   @id @default(cuid())
-  rating    Int      // 1-5
+  rating    Int
   comment   String?
   createdAt DateTime @default(now())
 
-  // リレーション
   contractId String
   contract   Contract @relation(fields: [contractId], references: [id])
   reviewerId String
@@ -162,14 +151,12 @@ model Review {
   @@index([revieweeId])
 }
 
-// メッセージ
 model Message {
   id        String   @id @default(cuid())
   content   String
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  // リレーション
   senderId  String
   sender    User     @relation(fields: [senderId], references: [id], map: "SentMessages")
   receiverId String
@@ -180,7 +167,6 @@ model Message {
   @@index([receiverId])
 }
 
-// 決済
 model Payment {
   id            String   @id @default(cuid())
   amount        Float
@@ -200,4 +186,33 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  parentId  String?
+  parent    Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  projects  Project[]
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Skill {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  categoryId String?
+  category  Category? @relation(fields: [categoryId], references: [id])
+  usageCount Int     @default(0)
+  isActive  Boolean  @default(true)
+
+  @@index([slug])
+  @@index([categoryId])
 }
