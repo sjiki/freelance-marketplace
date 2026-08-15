@@ -1,0 +1,203 @@
+// Prisma スキーマ - フリーランスマーケットプレイス
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ユーザー（クライアント/フリーランサー共通）
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          UserRole  @default(FREELANCER)
+  avatar        String?
+  bio           String?
+  skills        String[]
+  hourlyRate    Float?
+  isVerified    Boolean   @default(false)
+  rating        Float     @default(0)
+  totalJobs     Int       @default(0)
+  totalEarnings Float     @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // リレーション
+  projects      Project[]
+  proposals     Proposal[]
+  sentMessages  Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  reviews       Review[]
+  givenReviews  Review[]  @relation("GivenReviews")
+
+  @@index([email])
+  @@index([role])
+}
+
+enum UserRole {
+  CLIENT
+  FREELANCER
+  ADMIN
+}
+
+// 案件
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  skills      String[]
+  budgetType  BudgetType
+  budgetMin   Float
+  budgetMax   Float?
+  deadline    DateTime?
+  status      ProjectStatus @default(OPEN)
+  isFeatured  Boolean  @default(false)
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // クライアント
+  clientId    String
+  client      User     @relation(fields: [clientId], references: [id])
+
+  // リレーション
+  proposals   Proposal[]
+  contracts   Contract[]
+  reviews     Review[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([category])
+}
+
+enum BudgetType {
+  FIXED
+  HOURLY
+}
+
+enum ProjectStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// 提案（入札）
+model Proposal {
+  id          String   @id @default(cuid())
+  bidAmount   Float
+  deliveryDays Int
+  coverLetter String
+  status      ProposalStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // リレーション
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  freelancerId String
+  freelancer  User     @relation(fields: [freelancerId], references: [id])
+  contracts   Contract[]
+
+  @@index([projectId])
+  @@index([freelancerId])
+  @@unique([projectId, freelancerId])
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+// 契約
+model Contract {
+  id          String   @id @default(cuid())
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  amount      Float
+  status      ContractStatus @default(ACTIVE)
+  milestone   Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // リレーション
+  projectId   String   @unique
+  project     Project  @relation(fields: [projectId], references: [id])
+  proposalId  String   @unique
+  proposal    Proposal @relation(fields: [proposalId], references: [id])
+  reviews     Review[]
+}
+
+enum ContractStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+// レビュー
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  // リレーション
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id])
+  reviewerId String
+  reviewer   User     @relation(fields: [reviewerId], references: [id], map: "GivenReviews")
+  revieweeId String
+  reviewee   User     @relation(fields: [revieweeId], references: [id])
+
+  @@index([contractId])
+  @@index([revieweeId])
+}
+
+// メッセージ
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // リレーション
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], map: "SentMessages")
+  receiverId String
+  receiver  User     @relation(fields: [receiverId], references: [id], map: "ReceivedMessages")
+  contractId String?
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+// 決済
+model Payment {
+  id            String   @id @default(cuid())
+  amount        Float
+  currency      String   @default("JPY")
+  status        PaymentStatus @default(PENDING)
+  stripePaymentId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  contractId    String?
+
+  @@index([status])
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
