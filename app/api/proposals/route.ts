@@ -14,9 +14,7 @@ const createProposalSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
+    if (!session?.user) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
@@ -39,9 +37,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
+    if (!session?.user) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
 
     const body = await request.json();
     const validated = createProposalSchema.parse(body);
@@ -50,9 +46,7 @@ export async function POST(request: NextRequest) {
       where: { projectId_freelancerId: { projectId: validated.projectId, freelancerId: session.user.id } },
     });
 
-    if (existing) {
-      return NextResponse.json({ error: '既に提案しています' }, { status: 409 });
-    }
+    if (existing) return NextResponse.json({ error: '既に提案しています' }, { status: 409 });
 
     const proposal = await prisma.proposal.create({
       data: { ...validated, freelancerId: session.user.id },
@@ -61,9 +55,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(proposal, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: '入力内容が不正です', details: error.errors }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return NextResponse.json({ error: '入力内容が不正です', details: error.errors }, { status: 400 });
     console.error('Error creating proposal:', error);
     return NextResponse.json({ error: '提案の作成に失敗しました' }, { status: 500 });
   }

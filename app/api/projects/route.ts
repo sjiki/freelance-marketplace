@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    const body = await request.json;
+    const body = await request.json();
     const validated = createProjectSchema.parse(body);
 
     const user = await prisma.user.findUnique({ where: { id: session.user.id } });
