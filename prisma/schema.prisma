@@ -32,6 +32,7 @@ model User {
   receivedMessages Message[] @relation("ReceivedMessages")
   reviews       Review[]
   givenReviews  Review[]  @relation("GivenReviews")
+  portfolio     Portfolio[]
 
   @@index([email])
   @@index([role])
@@ -215,4 +216,25 @@ model Skill {
 
   @@index([slug])
   @@index([categoryId])
+}
+
+model Portfolio {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  thumbnailUrl String?
+  images      String[]
+  projectUrl  String?
+  tags        String[]
+  views       Int      @default(0)
+  likes       Int      @default(0)
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  freelancerId String
+  freelancer   User     @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  @@index([freelancerId])
+  @@index([isFeatured])
 }
